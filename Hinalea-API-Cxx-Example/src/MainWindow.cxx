@@ -1,8 +1,7 @@
 #include "MainWindow.hxx"
 #include "ui_MainWindow.h"
 
-#include <Hinalea/Print.hxx>
-
+#include <QApplication>
 #include <QChart>
 #include <QDateTime>
 #include <QDebug>
@@ -18,9 +17,35 @@
 #include <QTimer>
 
 #include <chrono>
+#include <iostream>
 #include <type_traits>
 
 namespace {
+
+auto debugSeries(
+    HINALEA_IN ::std::initializer_list< QLineSeries const * > const series
+    ) -> void
+{
+    if constexpr ( false )
+    {
+        for ( auto const * s : series )
+        {
+            qDebug( ) << s->objectName( ) << s->points( );
+        }
+
+        qDebug( ) << "================================================================================================================================";
+    }
+}
+
+template <
+    typename... Series
+    >
+auto debugSeries(
+    HINALEA_IN Series const * ... series
+    ) -> void
+{
+    ::debugSeries( { series... } );
+}
 
 [[ nodiscard ]]
 auto cameraTypes(
@@ -204,6 +229,7 @@ MainWindow::~MainWindow(
     )
 {
     this->cancel( );
+    this->powerOff( );
 
     for ( auto thread : {
         ::std::ref( this->recordThread ),
@@ -215,7 +241,6 @@ MainWindow::~MainWindow(
         ::joinThread( thread.get( ) );
     }
 
-    this->powerOff( );
     this->saveSettings( );
 }
 
@@ -622,7 +647,7 @@ auto MainWindow::displayChannels(
     ) const -> ::hinalea::Int
 {
     return ( this->camera.channels( ) == 3 )
-        ? 4 // Add alpha channel for QImage::Format to work nicely with 16-bit RGB images.
+        ? 4 /* Add alpha channel for QImage::Format to work nicely with 16-bit RGB images. */
         : 1
         ;
 }
@@ -740,7 +765,7 @@ auto MainWindow::xAxisTitle(
 auto MainWindow::yAxisTitle(
     ) const -> QString
 {
-    return this->realtime_reflectance_is_active( )
+    return this->realtimeReflectanceIsActive( )
         ? QObject::tr( "Reflectance" )
         : QObject::tr( "Intensity" );
 }
@@ -773,7 +798,7 @@ auto MainWindow::xAxisRange(
 auto MainWindow::yAxisRange(
     ) const -> ::std::array< ::hinalea::Real, 2 >
 {
-    if ( this->realtime_reflectance_is_active( ) )
+    if ( this->realtimeReflectanceIsActive( ) )
     {
         return { 0.0, 1.5 };
     }
@@ -788,13 +813,6 @@ auto MainWindow::powerOn(
     ) -> void
 try
 {
-    QObject::connect(
-        this->displayTimer,
-        &QTimer::timeout,
-        this,
-        &MainWindow::onDisplayTimerTimeout
-        );
-
     if ( auto const settings = this->settingsPath( );
          not ::hinalea::fs::exists( settings ) )
     {
@@ -866,16 +884,15 @@ auto MainWindow::powerOff(
 {
     qDebug( ) << Q_FUNC_INFO;
 
+    auto const lock = ::std::scoped_lock{ this->displayMutex };
     this->displayTimer->stop( );
 
-    QObject::disconnect(
-        this->displayTimer,
-        &QTimer::timeout,
-        this,
-        &MainWindow::onDisplayTimerTimeout
-        );
+    if ( not this->displaySemaphore.tryAcquire( ) )
+    {
+        QApplication::processEvents( );
+        this->displaySemaphore.acquire( );
+    }
 
-    this->displaySemaphore.acquire( );
     auto const releaser = QSemaphoreReleaser{ this->displaySemaphore };
 
     {
@@ -1329,10 +1346,7 @@ auto MainWindow::updateSeries< ::hinalea::RealtimeMode::ProcessedWavelength_t >(
         this->seriesL->append( wavelengths[ i ], spectra[ i ] );
     }
 
-#if 0
-   qDebug( ) << "L:" << seriesL->points( );
-   qDebug( ) << "================================================================================================================================";
-#endif
+    ::debugSeries( this->seriesL );
 }
 
 template < >
@@ -1352,10 +1366,7 @@ auto MainWindow::updateSeries< ::hinalea::RealtimeMode::RawChannelSignals_t >(
             this->seriesL->append( gap_indexes[ i ], spectra[ i ] );
         }
 
-#if 0
-       qDebug( ) << "L:" << seriesL->points( );
-       qDebug( ) << "================================================================================================================================";
-#endif
+        ::debugSeries( this->seriesL );
     }
     else
     {
@@ -1369,12 +1380,7 @@ auto MainWindow::updateSeries< ::hinalea::RealtimeMode::RawChannelSignals_t >(
             this->seriesB->append( x, spectra[ i + count * 2 ] );
         }
 
-#if 0
-        qDebug( ) << "R:" << seriesR->points( );
-        qDebug( ) << "G:" << seriesG->points( );
-        qDebug( ) << "B:" << seriesB->points( );
-        qDebug( ) << "================================================================================================================================";
-#endif
+        ::debugSeries( this->seriesR, this->seriesG, this->seriesB );
     }
 }
 
@@ -1412,6 +1418,7 @@ auto MainWindow::updateAcquisitionImage(
 try
 {
     auto releaser = QSemaphoreReleaser{ this->displaySemaphore };
+    auto const lock = ::std::scoped_lock{ this->displayMutex };
 
     /* Raw images are always monochrome, so allocate only 1 channel. */
     auto rawImage = this->camera.allocate_image( 1 );
@@ -1425,7 +1432,11 @@ try
     }
 
     {
-        auto const [ min, max, saturation ] = hinalea::image_statistics( this->camera.qt_image( rawImage ), this->intensityThreshold( ), this->ignoreCount( ) );
+        auto const [ min, max, saturation ] = ::hinalea::image_statistics(
+            this->camera.qt_image( rawImage ),
+            this->intensityThreshold( ),
+            this->ignoreCount( )
+            );
         auto const fps = this->camera.frames_per_second( );
         Q_EMIT this->doUpdateStatistics( min, max, saturation, fps );
     }
@@ -1443,8 +1454,11 @@ try
         ::hinalea::demosaic( this->camera, rawImage, this->displayImage, channels );
     }
 
-    releaser.cancel( );
-    Q_EMIT this->doUpdateImage( );
+    if ( this->displayTimer->isActive( ) )
+    {
+        releaser.cancel( );
+        Q_EMIT this->doUpdateImage( );
+    }
 }
 catch ( ::std::exception const & exc )
 {
@@ -1453,8 +1467,10 @@ catch ( ::std::exception const & exc )
 
 auto MainWindow::updateRealtimeImage(
     ) -> void
+try
 {
     auto releaser = QSemaphoreReleaser{ this->displaySemaphore };
+    auto const lock = ::std::scoped_lock{ this->displayMutex };
     this->displayImage = this->realtime.allocate_image( );
 
     if ( not this->realtime.image( this->displayImage ) )
@@ -1469,12 +1485,19 @@ auto MainWindow::updateRealtimeImage(
         Q_EMIT this->doUpdateStatistics( min, max, ui->saturationSpinBox->minimum( ), fps );
     }
 
-    releaser.cancel( );
-    Q_EMIT this->doUpdateImage( );
-    Q_EMIT this->doUpdateSeries( );
+    if ( this->displayTimer->isActive( ) )
+    {
+        releaser.cancel( );
+        Q_EMIT this->doUpdateSeries( );
+        Q_EMIT this->doUpdateImage( );
+    }
+}
+catch ( ::std::exception const & exc )
+{
+    ::std::cerr << exc.what( ) << '\n';
 }
 
-auto MainWindow::realtime_reflectance_is_active(
+auto MainWindow::realtimeReflectanceIsActive(
     ) const -> bool
 {
     return ui->reflectanceCheckBox->isChecked( ) and this->realtime.is_white_compatible( );
@@ -1574,24 +1597,31 @@ auto MainWindow::onDisplayTimerTimeout(
         return;
     }
 
-    auto releaser = QSemaphoreReleaser{ this->displaySemaphore };
-    ::joinThread( this->displayThread );
+    try
+    {
+        auto releaser = QSemaphoreReleaser{ this->displaySemaphore };
+        ::joinThread( this->displayThread );
 
-    this->displayThread = ::std::thread(
-        [ this ]
-        {
-            if ( this->realtime.is_active( ) )
+        this->displayThread = ::std::thread(
+            [ this ]
             {
-                this->updateRealtimeImage( );
+                if ( this->realtime.is_active( ) )
+                {
+                    this->updateRealtimeImage( );
+                }
+                else
+                {
+                    this->updateAcquisitionImage( );
+                }
             }
-            else
-            {
-                this->updateAcquisitionImage( );
-            }
-        }
-        );
+            );
 
-    releaser.cancel( );
+        releaser.cancel( );
+    }
+    catch ( ::std::exception const & exc )
+    {
+        ::std::cerr << exc.what( ) << '\n';
+    }
 }
 
 auto MainWindow::onPowerButtonToggled(

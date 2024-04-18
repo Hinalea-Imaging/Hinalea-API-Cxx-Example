@@ -11,12 +11,14 @@
 
 #line HINALEA_FILENAME( "Main.cxx" )
 
+namespace {
+
 [[ nodiscard ]]
-auto fmt_log(
-    HINALEA_IN ::hinalea::Log const log_flag
+auto formatLog(
+    HINALEA_IN ::hinalea::Log const logFlag
     ) noexcept -> ::std::string_view
 {
-    switch ( log_flag )
+    switch ( logFlag )
     {
         case ::hinalea::Log::Debug:    { return "Debug";    }
         case ::hinalea::Log::Info:     { return "Info";     }
@@ -27,8 +29,8 @@ auto fmt_log(
     }
 }
 
-auto log_callback(
-    HINALEA_IN   ::hinalea::Log const log_flag,
+auto logCallback(
+    HINALEA_IN   ::hinalea::Log const logFlag,
     HINALEA_IN_Z char const * const   message,
     HINALEA_IN_Z char const * const   file_name,
     HINALEA_IN_Z char const * const   function_name,
@@ -36,7 +38,7 @@ auto log_callback(
     ) -> void
 {
     ::std::cerr
-        << fmt_log( log_flag )
+        << ::formatLog( logFlag )
         << "\n | file: " << file_name
         << "\n | func: " << function_name
         << "\n | line: " << line
@@ -47,13 +49,15 @@ auto log_callback(
 auto setupApplication(
     ) -> void
 {
-    QCoreApplication::setOrganizationName( "Hinalea" );
-    QCoreApplication::setOrganizationDomain( "hinalea.com" );
-    QCoreApplication::setApplicationName( "Hinalea API Example App" );
+    QApplication::setOrganizationName( "Hinalea" );
+    QApplication::setOrganizationDomain( "hinalea.com" );
+    QApplication::setApplicationName( "Hinalea API Example App" );
 
     auto * const style = QStyleFactory::create( "Fusion" );
     QApplication::setStyle( style );
 }
+
+} /* namespace anonymous */
 
 auto main(
     HINALEA_IN int     argc,
@@ -66,7 +70,7 @@ try
         << ", Qt Version: " << QT_VERSION_STR << " ]"
         << ::std::endl;
 
-    ::hinalea::log::set_log_callback< &log_callback >(
+    ::hinalea::log::set_log_callback< &::logCallback >(
         ::hinalea::Log::All
         // ::hinalea::Log::Warning | ::hinalea::Log::Error | ::hinalea::Log::Critical
         );

@@ -108,13 +108,14 @@ private:
     ::hinalea::Realtime realtime{ this->camera, this->fpi };
     ::hinalea::SpectralMetric< ::hinalea::f32 > spectral_metric{ ::hinalea::SpectralMetricType::SpectralAngle };
 
-    hinalea::RealtimeClassifyCallback cb;
     ::std::optional< QPoint > endmemberLocation_{ ::std::nullopt };
 
     ::hinalea::Camera::Image displayImage{ };
     QSemaphore displaySemaphore{ 1 };
-    ::std::thread displayThread{ };
 
+    ::std::mutex displayMutex{ };
+
+    ::std::thread displayThread{ };
     ::std::thread recordThread{ };
     ::std::thread processThread{ };
     ::std::thread realtimeThread{ };
@@ -332,7 +333,9 @@ private:
     auto updateDark(
         ) -> void;
 
-    template < typename RealtimeMode >
+    template <
+        typename RealtimeMode
+        >
     auto updateSeries(
         ) -> void;
 
@@ -348,7 +351,7 @@ private:
     auto updateRealtimeImage(
         ) -> void;
 
-    auto realtime_reflectance_is_active(
+    auto realtimeReflectanceIsActive(
         ) const -> bool;
 
     auto enablePowerWidgets(

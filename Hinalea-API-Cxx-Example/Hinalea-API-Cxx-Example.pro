@@ -78,7 +78,7 @@ INCLUDEPATH += $$HINALEA_API/include
 
 LIBS += -L$$HINALEA_API/lib
 
-if ( false ) {
+if ( true ) {
     # This is for client use.
     LIBS += -lHinaleaAPI_msvc_x64
 } else {
