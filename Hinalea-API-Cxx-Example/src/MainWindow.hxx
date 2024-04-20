@@ -225,6 +225,14 @@ private:
     auto measurementType(
         ) const -> ::hinalea::Acquisition::MeasurementTypeVariant;
 
+    [[ nodiscard ]]
+    auto horizontalFlip(
+        ) const -> bool;
+
+    [[ nodiscard ]]
+    auto verticalFlip(
+        ) const -> bool;
+
     auto progressCallback(
         HINALEA_IN ::hinalea::Int percent
         ) -> void;
@@ -313,6 +321,9 @@ private:
         ) -> void;
 
     auto setupBinning(
+        ) -> void;
+
+    auto setupFlip(
         ) -> void;
 
     auto setupAll(

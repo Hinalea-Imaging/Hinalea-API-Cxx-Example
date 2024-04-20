@@ -726,6 +726,18 @@ auto MainWindow::measurementType(
     Q_UNREACHABLE( );
 }
 
+auto MainWindow::horizontalFlip(
+    ) const -> bool
+{
+    return ui->horizontalCheckBox->isChecked( );
+}
+
+auto MainWindow::verticalFlip(
+    ) const -> bool
+{
+    return ui->verticalCheckBox->isChecked( );
+}
+
 auto MainWindow::progressCallback(
     HINALEA_IN ::hinalea::Int const percent
     ) -> void
@@ -1171,6 +1183,7 @@ auto MainWindow::setupProcess(
         this->processor.set_cube_type( ::hinalea::CubeType::Intensity | ::hinalea::CubeType::Reflectance );
     }
 
+
     this->processor.set_data_type( ::hinalea::DataType::Float32 );
     // this->processor.set_scale_factor( ::hinalea::ndebug ? 0.5 : 0.1 ); /* make processing faster for debugging purposes */
     this->processor.set_scale_factor( 1.0 );
@@ -1179,6 +1192,10 @@ auto MainWindow::setupProcess(
 
     this->processor.set_suffix( ::hinalea::CubeType::Intensity  , HINALEA_PATH( "" ) );
     this->processor.set_suffix( ::hinalea::CubeType::Reflectance, HINALEA_PATH( "_ref" ) );
+
+this->processor.set_cube_type( ::hinalea::CubeType::Intensity | ::hinalea::CubeType::RealtimeModel );
+this->processor.set_suffix( ::hinalea::CubeType::RealtimeModel, HINALEA_PATH( "_rm" ) );
+this->processor.set_scale_factor( 0.25 );
 }
 
 auto MainWindow::setupBitDepth(
@@ -1282,12 +1299,27 @@ auto MainWindow::setupBinning(
     }
 }
 
+auto MainWindow::setupFlip(
+    ) -> void
+{
+    if ( not this->camera.set_flip( ::hinalea::Orientation::Horizontal, this->horizontalFlip( ) ) )
+    {
+        qWarning( ) << "Failed to setup horizontal flip.";
+    }
+
+    if ( not this->camera.set_flip( ::hinalea::Orientation::Vertical, this->verticalFlip( ) ) )
+    {
+        qWarning( ) << "Failed to setup vertical flip.";
+    }
+}
+
 auto MainWindow::setupAll(
     ) -> void
 {
     this->setupBinning( );
     this->setupBitDepth( );
     this->setupExposure( );
+    this->setupFlip( );
     this->setupGain( );
     this->setupGainMode( );
     this->setupGapIndex( );
