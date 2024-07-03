@@ -1,6 +1,10 @@
 #include "MainWindow.hxx"
 
-#include <Hinalea/Print.hxx>
+#include <Hinalea/Version.h>
+
+#if !HINALEA_VERSION_CHECK( 2, 0, 0 )
+#  error "This example application requires Hinalea API v2."
+#endif
 
 #include <QApplication>
 #include <QStyleFactory>
@@ -8,8 +12,6 @@
 #include <iostream>
 
 #include <cstdlib>
-
-#line HINALEA_FILENAME( "Main.cxx" )
 
 namespace {
 
@@ -50,7 +52,7 @@ auto setupApplication(
     ) -> void
 {
     QApplication::setOrganizationName( "Hinalea" );
-    QApplication::setOrganizationDomain( "hinalea.com" );
+    QApplication::setOrganizationDomain( "hinaleaimaging.com" );
     QApplication::setApplicationName( "Hinalea API Example App" );
 
     auto * const style = QStyleFactory::create( "Fusion" );
@@ -71,8 +73,13 @@ try
         << ::std::endl;
 
     ::hinalea::log::set_log_callback< &::logCallback >(
+#if 0
         ::hinalea::Log::All
-        // ::hinalea::Log::Warning | ::hinalea::Log::Error | ::hinalea::Log::Critical
+#else
+        // ::hinalea::Log::Warning |
+        ::hinalea::Log::Error |
+        ::hinalea::Log::Critical
+#endif
         );
 
     ::setupApplication( );
@@ -84,6 +91,6 @@ try
 }
 catch( ::std::exception const & exc )
 {
-    ::hinalea::log::critical( exc.what( ), __FILE__, __func__, __LINE__ );
+    ::hinalea::log::critical( exc.what( ) );
     return EXIT_FAILURE;
 }

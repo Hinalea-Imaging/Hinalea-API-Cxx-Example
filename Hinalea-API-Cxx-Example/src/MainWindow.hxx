@@ -30,6 +30,7 @@ QT_CHARTS_USE_NAMESPACE
 #endif /* QT_VERSION_CHECK */
 
 QT_BEGIN_NAMESPACE
+class QDoubleSpinBox;
 class QGraphicsPixmapItem;
 class QImage;
 class QTimer;
@@ -38,7 +39,8 @@ QT_END_NAMESPACE
 QT_USE_NAMESPACE
 
 /* The UI is set to show milliseconds by default. If you wish to use microseconds instead, change the value to `false`. */
-inline bool constexpr ui_exposure_is_milliseconds = true;
+inline bool constexpr ui_exposure_is_milliseconds = false;
+// inline bool constexpr ui_exposure_is_milliseconds = true;
 
 using UiExposure = ::std::conditional_t<
     ::ui_exposure_is_milliseconds,
@@ -80,6 +82,9 @@ Q_SIGNALS:
     void doUpdateImage(
         );
 
+    void doUpdateClassify(
+        );
+
     void doUpdateSeries(
         );
 
@@ -87,7 +92,8 @@ Q_SIGNALS:
         HINALEA_IN int    min,
         HINALEA_IN int    max,
         HINALEA_IN int    saturation,
-        HINALEA_IN double fps
+        HINALEA_IN double fps,
+        HINALEA_IN double cps
         );
 
 private:
@@ -100,6 +106,7 @@ private:
     QLineSeries * seriesR; // raw signal red
     QLineSeries * seriesG; // raw signal green
     QLineSeries * seriesB; // raw signal blue
+    QString darkDirectory{ };
 
     ::hinalea::Camera camera{ };
     ::hinalea::Fpi fpi{ };
@@ -111,6 +118,8 @@ private:
     ::std::optional< QPoint > endmemberLocation_{ ::std::nullopt };
 
     ::hinalea::Camera::Image displayImage{ };
+
+    ::hinalea::Int displayLinePitch{ };
     QSemaphore displaySemaphore{ 1 };
 
     ::std::mutex displayMutex{ };
@@ -222,6 +231,10 @@ private:
         ) const -> ::hinalea::Realtime::RealtimeModeVariant;
 
     [[ nodiscard ]]
+    auto movePattern(
+        ) const -> ::hinalea::MovePatternVariant;
+
+    [[ nodiscard ]]
     auto measurementType(
         ) const -> ::hinalea::Acquisition::MeasurementTypeVariant;
 
@@ -290,7 +303,9 @@ private:
     auto setupAxis(
         HINALEA_IN Qt::Orientation                    orientation,
         HINALEA_IN QString const &                    title,
-        HINALEA_IN ::std::array< ::hinalea::Real, 2 > values
+        HINALEA_IN ::std::array< ::hinalea::Real, 2 > values,
+        HINALEA_IN QDoubleSpinBox *                   lowerSpinBox,
+        HINALEA_IN QDoubleSpinBox *                   upperSpinBox
         ) -> void;
 
     auto setupXAxis(
@@ -380,11 +395,15 @@ private:
     auto onUpdateImage(
         ) -> void;
 
+    auto onUpdateClassify(
+        ) -> void;
+
     auto onUpdateStatistics(
         HINALEA_IN int    min,
         HINALEA_IN int    max,
         HINALEA_IN int    saturation,
-        HINALEA_IN double fps
+        HINALEA_IN double fps,
+        HINALEA_IN double cps
         ) -> void;
 
     auto onDisplayTimerTimeout(
@@ -440,6 +459,9 @@ private:
     auto onLoadSettingsClicked(
         ) -> void;
 
+    auto onLoadFreeFlyClicked(
+        ) -> void;
+
     auto onLoadWhiteClicked(
         ) -> void;
 
@@ -455,6 +477,9 @@ private:
     auto onClearSettingsClicked(
         ) -> void;
 
+    auto onClearFreeFlyClicked(
+        ) -> void;
+
     auto onClearWhiteClicked(
         ) -> void;
 
@@ -465,6 +490,10 @@ private:
         ) -> void;
 
     auto onClearGapClicked(
+        ) -> void;
+
+    auto onActiveDarkToggled(
+        HINALEA_IN bool checked
         ) -> void;
 
     auto onReflectanceCheckBoxToggled(
@@ -478,6 +507,19 @@ private:
     auto onThreadFailed(
         HINALEA_IN QString const & title,
         HINALEA_IN QString const & what
+        ) -> void;
+
+    auto onXAxisRangeChanged(
+        ) -> void;
+
+    auto onYAxisRangeChanged(
+        ) -> void;
+
+    auto onFpiSleepFactorChanged(
+        ) -> void;
+
+    auto onMovePatternComboBoxCurrentIndexChanged(
+        HINALEA_IN int index
         ) -> void;
 
     auto classifyCallback(

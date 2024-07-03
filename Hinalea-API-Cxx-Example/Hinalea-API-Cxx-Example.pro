@@ -7,18 +7,19 @@
 # https://doc.qt.io/qt-5/licensing.html or https://doc.qt.io/qt-6/licensing.html
 QT += charts core gui widgets
 
-CONFIG += c++17
+# CONFIG += c++17
+CONFIG += c++20
 CONFIG += no_keywords
 CONFIG -= qtquickcompiler
 
 DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_NO_NARROWING_CONVERSIONS_IN_CONNECT
 
-#DEFINES += QT_NO_DEBUG_OUTPUT
-#DEFINES += QT_NO_INFO_OUTPUT
-#DEFINES += QT_NO_WARNING_OUTPUT
-#DEFINES += QT_FATAL_WARNINGS
-#DEFINES += QT_FATAL_CRITICALS
+DEFINES += QT_NO_DEBUG_OUTPUT
+# DEFINES += QT_NO_INFO_OUTPUT
+# DEFINES += QT_NO_WARNING_OUTPUT
+# DEFINES += QT_FATAL_WARNINGS
+# DEFINES += QT_FATAL_CRITICALS
 
 ###############################################################################
 # Compiler Options
@@ -26,8 +27,9 @@ DEFINES += QT_NO_NARROWING_CONVERSIONS_IN_CONNECT
 
 DEFINES += _CRT_SECURE_NO_WARNINGS
 
+# /std:c++17 \
 QMAKE_CXXFLAGS += \
-    /std:c++17 \
+    /std:c++20 \
     /permissive- \
     /volatile:iso \
     /EHsc \
@@ -78,7 +80,7 @@ INCLUDEPATH += $$HINALEA_API/include
 
 LIBS += -L$$HINALEA_API/lib
 
-if ( true ) {
+if ( false ) {
     # This is for client use.
     LIBS += -lHinaleaAPI_msvc_x64
 } else {

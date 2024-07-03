@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1252</width>
-    <height>537</height>
+    <width>1691</width>
+    <height>712</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -150,6 +150,29 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="cpsLabel">
+        <property name="text">
+         <string>CPS:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="cpsSpinBox">
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="buttonSymbols">
+         <enum>QAbstractSpinBox::NoButtons</enum>
+        </property>
+        <property name="specialValueText">
+         <string>N/A</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="statisticsSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -161,6 +184,126 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="movePatternLabel">
+        <property name="text">
+         <string>Free Fly Process:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="movePatternComboBox">
+        <property name="currentIndex">
+         <number>2</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>Forward</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Backward</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Alternate</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="consecutiveLabel">
+        <property name="text">
+         <string>Consecutive:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="consecutiveSpinBox">
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>1.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="resetLabel">
+        <property name="text">
+         <string>Reset:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="resetSpinBox">
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>1.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="xAxisLabel">
+        <property name="text">
+         <string>X-Axis:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="xAxisLowerSpinBox"/>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="xAxisUpperSpinBox"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="yAxisLabel">
+        <property name="text">
+         <string>Y-Axis:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="yAxisLowerSpinBox"/>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="yAxisUpperSpinBox"/>
       </item>
      </layout>
     </item>
@@ -240,6 +383,19 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="activeDarkButton">
+        <property name="text">
+         <string>Active</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="clearDarkButton">
         <property name="text">
          <string>Clear</string>
@@ -299,40 +455,34 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="controlsLayout">
+     <layout class="QHBoxLayout" name="freeFlyLayout">
       <item>
+       <widget class="QPushButton" name="loadFreeFlyButton">
+        <property name="text">
+         <string>Load Free Fly</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="freeFlyLineEdit">
+        <property name="placeholderText">
+         <string>Please load free fly file.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="clearFreeFlyButton">
+        <property name="text">
+         <string>Clear</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="1">
-         <widget class="QComboBox" name="modeComboBox">
-          <item>
-           <property name="text">
-            <string>Static</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Realtime</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="QPushButton" name="processButton">
-          <property name="text">
-           <string>Process</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QPushButton" name="recordButton">
-          <property name="text">
-           <string>Record</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="2">
          <widget class="QComboBox" name="measurementTypeComboBox">
           <item>
@@ -350,7 +500,15 @@
             <string>Dark</string>
            </property>
           </item>
+          <item>
+           <property name="text">
+            <string>Realtime Model</string>
+           </property>
+          </item>
          </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QComboBox" name="cameraComboBox"/>
         </item>
         <item row="1" column="1">
          <widget class="QCheckBox" name="reflectanceCheckBox">
@@ -359,41 +517,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QComboBox" name="cameraComboBox"/>
-        </item>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="powerButton">
-          <property name="text">
-           <string>Power</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4">
-         <widget class="QSpinBox" name="smoothSpinBox">
-          <property name="suffix">
-           <string> smooth</string>
-          </property>
-          <property name="maximum">
-           <number>10</number>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="3" colspan="2">
-         <widget class="QProgressBar" name="progressBar">
-          <property name="value">
-           <number>0</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="spinBoxLayout">
-        <item>
+        <item row="0" column="6" rowspan="2">
          <widget class="QGroupBox" name="bitDepthGroupBox">
           <property name="title">
            <string>Bit Depth</string>
@@ -416,7 +540,75 @@
           </layout>
          </widget>
         </item>
-        <item>
+        <item row="1" column="3" colspan="2">
+         <widget class="QProgressBar" name="progressBar">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="modeComboBox">
+          <item>
+           <property name="text">
+            <string>Static</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>NRT: Processed Wavelength</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>NRT: Raw Signal</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>NRT: Free Fly</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="powerButton">
+          <property name="text">
+           <string>Power</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QPushButton" name="processButton">
+          <property name="text">
+           <string>Process</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QSpinBox" name="smoothSpinBox">
+          <property name="suffix">
+           <string> smooth</string>
+          </property>
+          <property name="maximum">
+           <number>10</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="recordButton">
+          <property name="text">
+           <string>Record</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7" rowspan="2">
          <widget class="QGroupBox" name="binningGroupBox">
           <property name="title">
            <string>Binning</string>
@@ -464,6 +656,79 @@
           </layout>
          </widget>
         </item>
+        <item row="0" column="5" rowspan="2">
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>ROI</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="1" column="1">
+            <widget class="QSpinBox" name="bottomRightXSpinBox">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="maximum">
+              <number>9999</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QSpinBox" name="topLeftYSpinBox">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="maximum">
+              <number>9999</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QSpinBox" name="bottomRightYSpinBox">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="maximum">
+              <number>9999</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="topLeftXSpinBox">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="maximum">
+              <number>9999</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="topLeftLabel">
+             <property name="text">
+              <string>TL:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="bottomRightLabel">
+             <property name="text">
+              <string>BR:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_8">
         <item>
          <widget class="QGroupBox" name="flipGroupBox">
           <property name="title">
@@ -638,8 +903,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1252</width>
-     <height>22</height>
+     <width>1691</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>

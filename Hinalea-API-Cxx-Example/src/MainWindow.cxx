@@ -1,6 +1,8 @@
 #include "MainWindow.hxx"
 #include "ui_MainWindow.h"
 
+#include <Hinalea/Print.hxx>
+
 #include <QApplication>
 #include <QChart>
 #include <QDateTime>
@@ -19,6 +21,20 @@
 #include <chrono>
 #include <iostream>
 #include <type_traits>
+
+HINALEA_EXTERN_C
+HINALEA_API(
+    hinalea_realtime_run_free_fly_v2,
+    HINALEA_IN hinalea_RealtimeHandle_v2 * realtime
+    );
+
+HINALEA_EXTERN_C
+HINALEA_API(
+    hinalea_realtime_set_free_fly_path_v2,
+    HINALEA_IN                             hinalea_RealtimeHandle_v2 * realtime,
+    HINALEA_IN_READS( free_fly_path_size ) hinalea_path const *        free_fly_path_data,
+    HINALEA_IN                             hinalea_size                free_fly_path_size
+    );
 
 namespace {
 
@@ -86,7 +102,7 @@ auto pathCast(
     HINALEA_IN ::hinalea::fs::path const & path
     ) -> QString
 {
-    return ::pathCast( path.native( ) );
+    return ::pathCast( path.native( ) ).replace( QChar{ '\\' }, QChar{ '/' } );
 }
 
 [[ nodiscard ]]
@@ -174,6 +190,18 @@ auto joinThread(
     }
 }
 
+[[ nodiscard ]]
+auto makeTimestamp(
+    ) -> QString
+{
+    /* Format will be: YYYYMMDD_hhmmss. */
+    auto datetime = QDateTime::currentDateTime( ).toString( Qt::ISODate );
+    datetime.remove( ':' );
+    datetime.remove( '-' );
+    datetime.replace( 'T', '_' );
+    return datetime;
+}
+
 } /* namespace anonymous */
 
 MainWindow::MainWindow(
@@ -198,7 +226,14 @@ MainWindow::MainWindow(
     Q_SET_OBJECT_NAME( seriesB );
 
     ui->setupUi( this );
-    this->setWindowTitle( QObject::tr( "Hinalea API (v" HINALEA_VERSION_STRING ") Qt (v" QT_VERSION_STR ") C++ Example" ) );
+
+    this->setWindowTitle(
+        QObject::tr(
+            "Hinalea API (v" HINALEA_VERSION_STRING ") "
+            "Qt (v" QT_VERSION_STR ") "
+            "C++ Example"
+            )
+        );
 
     HINALEA_ASSERT( ui->cameraComboBox->count( ) == 0 );
     ui->cameraComboBox->addItems( ::cameraTypes( ).keys( ) );
@@ -219,7 +254,7 @@ MainWindow::MainWindow(
     this->loadSettings( );
 
     /* NOTE:
-     * If MatrixVision is loaded before AlliedVision, it will throw "VmbErrorNoTL: No transport layers are found.".
+     * If MatrixVision is loaded before AlliedVision, it will throw "VmbErrorNoTL: No transport layers are found."
      * Seems ok if AlliedVision is loaded first and then can safely switch between the two.
      */
     this->updateCameraType( );
@@ -259,20 +294,23 @@ auto MainWindow::loadSettings(
 
     ui->darkLineEdit    ->setText( settings.value( "dark"     ).toString( ) );
     ui->gapLineEdit     ->setText( settings.value( "gaps"     ).toString( ) );
+    ui->freeFlyLineEdit ->setText( settings.value( "free-fly" ).toString( ) );
     ui->matrixLineEdit  ->setText( settings.value( "matrix"   ).toString( ) );
     ui->settingsLineEdit->setText( settings.value( "settings" ).toString( ) );
     ui->whiteLineEdit   ->setText( settings.value( "white"    ).toString( ) );
 
     ui->binningComboBox        ->setCurrentIndex( settings.value( "binning"     ).toInt( ) );
-    ui->bitDepthComboBox       ->setCurrentIndex( settings.value( "bit_depth"   ).toInt( ) );
+    ui->bitDepthComboBox       ->setCurrentIndex( settings.value( "bitDepth"    ).toInt( ) );
     ui->measurementTypeComboBox->setCurrentIndex( settings.value( "measurement" ).toInt( ) );
     ui->modeComboBox           ->setCurrentIndex( settings.value( "mode"        ).toInt( ) );
+    ui->movePatternComboBox    ->setCurrentIndex( settings.value( "movePattern" ).toInt( ) );
 
     ui->cameraComboBox->setCurrentText( settings.value( "camera" ).toString( ) );
 
-    ui->horizontalCheckBox ->setChecked( settings.value( "flip_horizontal" ).toBool( ) );
-    ui->verticalCheckBox   ->setChecked( settings.value( "flip_vertical"   ).toBool( ) );
-    ui->reflectanceCheckBox->setChecked( settings.value( "use_reflectance" ).toBool( ) );
+    ui->horizontalCheckBox ->setChecked( settings.value( "flipHorizontal" ).toBool( ) );
+    ui->verticalCheckBox   ->setChecked( settings.value( "flipVertical"   ).toBool( ) );
+    ui->reflectanceCheckBox->setChecked( settings.value( "useReflectance" ).toBool( ) );
+    ui->activeDarkButton   ->setChecked( settings.value( "activeDark"     ).toBool( ) );
 
     if ( auto const geometry = settings.value( "geometry" ).toByteArray( );
          geometry.isEmpty( ) )
@@ -303,20 +341,23 @@ auto MainWindow::saveSettings(
 
     settings.setValue( "dark"    , ui->darkLineEdit    ->text( ) );
     settings.setValue( "gaps"    , ui->gapLineEdit     ->text( ) );
+    settings.setValue( "free-fly", ui->freeFlyLineEdit ->text( ) );
     settings.setValue( "matrix"  , ui->matrixLineEdit  ->text( ) );
     settings.setValue( "settings", ui->settingsLineEdit->text( ) );
     settings.setValue( "white"   , ui->whiteLineEdit   ->text( ) );
 
     settings.setValue( "binning"    , ui->binningComboBox        ->currentIndex( ) );
-    settings.setValue( "bit_depth"  , ui->bitDepthComboBox       ->currentIndex( ) );
+    settings.setValue( "bitDepth"   , ui->bitDepthComboBox       ->currentIndex( ) );
     settings.setValue( "measurement", ui->measurementTypeComboBox->currentIndex( ) );
     settings.setValue( "mode"       , ui->modeComboBox           ->currentIndex( ) );
+    settings.setValue( "movePattern", ui->movePatternComboBox    ->currentIndex( ) );
 
     settings.setValue( "camera", ui->cameraComboBox->currentText( ) );
 
-    settings.setValue( "flip_horizontal", ui->horizontalCheckBox ->isChecked( ) );
-    settings.setValue( "flip_vertical"  , ui->verticalCheckBox   ->isChecked( ) );
-    settings.setValue( "use_reflectance", ui->reflectanceCheckBox->isChecked( ) );
+    settings.setValue( "flipHorizontal", ui->horizontalCheckBox ->isChecked( ) );
+    settings.setValue( "flipVertical"  , ui->verticalCheckBox   ->isChecked( ) );
+    settings.setValue( "useReflectance", ui->reflectanceCheckBox->isChecked( ) );
+    settings.setValue( "activeDark"    , ui->activeDarkButton   ->isChecked( ) );
 
     settings.setValue( "geometry", this->saveGeometry( ) );
 }
@@ -348,6 +389,14 @@ auto MainWindow::initConnections(
         &MainWindow::doUpdateImage,
         this,
         &MainWindow::onUpdateImage,
+        Qt::QueuedConnection
+        );
+
+    QObject::connect(
+        this,
+        &MainWindow::doUpdateClassify,
+        this,
+        &MainWindow::onUpdateClassify,
         Qt::QueuedConnection
         );
 
@@ -459,6 +508,13 @@ auto MainWindow::initConnections(
         );
 
     QObject::connect(
+        ui->loadFreeFlyButton,
+        &QAbstractButton::clicked,
+        this,
+        &MainWindow::onLoadFreeFlyClicked
+        );
+
+    QObject::connect(
         ui->loadWhiteButton,
         &QAbstractButton::clicked,
         this,
@@ -494,6 +550,13 @@ auto MainWindow::initConnections(
         );
 
     QObject::connect(
+        ui->clearFreeFlyButton,
+        &QAbstractButton::clicked,
+        this,
+        &MainWindow::onClearFreeFlyClicked
+        );
+
+    QObject::connect(
         ui->clearWhiteButton,
         &QAbstractButton::clicked,
         this,
@@ -520,6 +583,50 @@ auto MainWindow::initConnections(
         this,
         &MainWindow::onClearGapClicked
         );
+
+    QObject::connect(
+        ui->activeDarkButton,
+        &QAbstractButton::toggled,
+        this,
+        &MainWindow::onActiveDarkToggled
+        );
+
+    for ( auto * const spinBox : { ui->xAxisLowerSpinBox, ui->xAxisUpperSpinBox } )
+    {
+        QObject::connect(
+            spinBox,
+            &QDoubleSpinBox::valueChanged,
+            this,
+            &MainWindow::onXAxisRangeChanged
+            );
+    }
+
+    for ( auto * const spinBox : { ui->yAxisLowerSpinBox, ui->yAxisUpperSpinBox } )
+    {
+        QObject::connect(
+            spinBox,
+            &QDoubleSpinBox::valueChanged,
+            this,
+            &MainWindow::onYAxisRangeChanged
+            );
+    }
+
+    for ( auto * const spinBox : { ui->consecutiveSpinBox, ui->resetSpinBox } )
+    {
+        QObject::connect(
+            spinBox,
+            &QDoubleSpinBox::valueChanged,
+            this,
+            &MainWindow::onFpiSleepFactorChanged
+            );
+    }
+
+    QObject::connect(
+        ui->movePatternComboBox,
+        &QComboBox::currentIndexChanged,
+        this,
+        &MainWindow::onMovePatternComboBoxCurrentIndexChanged
+        );
 }
 
 auto MainWindow::initImageView(
@@ -539,20 +646,20 @@ auto MainWindow::initImageView(
 auto MainWindow::initChartView(
     ) -> void
 {
-    this->chart->addSeries( seriesL );
-    this->chart->addSeries( seriesR );
-    this->chart->addSeries( seriesG );
-    this->chart->addSeries( seriesB );
+    this->chart->addSeries( this->seriesL );
+    this->chart->addSeries( this->seriesR );
+    this->chart->addSeries( this->seriesG );
+    this->chart->addSeries( this->seriesB );
 
-    seriesL->setColor( Qt::gray  );
-    seriesR->setColor( Qt::red   );
-    seriesG->setColor( Qt::green );
-    seriesB->setColor( Qt::blue  );
+    this->seriesL->setColor( Qt::gray  );
+    this->seriesR->setColor( Qt::red   );
+    this->seriesG->setColor( Qt::green );
+    this->seriesB->setColor( Qt::blue  );
 
     this->chart->legend( )->hide( );
     this->chart->createDefaultAxes( );
     this->chart->setTitle( QObject::tr( "Spectra" ) );
-    ui->chartView->setChart( chart );
+    ui->chartView->setChart( this->chart );
 }
 
 auto MainWindow::initSpectralMetric(
@@ -646,10 +753,17 @@ auto MainWindow::cameraType(
 auto MainWindow::displayChannels(
     ) const -> ::hinalea::Int
 {
-    return ( this->camera.channels( ) == 3 )
-        ? 4 /* Add alpha channel for QImage::Format to work nicely with 16-bit RGB images. */
-        : 1
-        ;
+    if ( this->realtime.is_active( ) )
+    {
+        return 3;
+    }
+    else
+    {
+        return ( this->camera.channels( ) == 3 )
+            ? 4 /* Add alpha channel for QImage::Format to work nicely with 16-bit RGB images. */
+            : 1
+            ;
+    }
 }
 
 auto MainWindow::intensityThreshold(
@@ -695,22 +809,61 @@ auto MainWindow::operationMode(
 {
     return ( ui->modeComboBox->currentIndex( ) == 0 )
         ? OperationMode::StaticMode
-        : OperationMode::RealtimeMode;
+        : OperationMode::RealtimeMode
+        ;
 }
 
 auto MainWindow::displayMode(
     ) const -> ::hinalea::Realtime::DisplayModeVariant
 {
-    return ::hinalea::DisplayMode::RawSelectedGap;
-//    return ::hinalea::DisplayMode::RawEveryGap;
+    // return ::hinalea::DisplayMode::RawSelectedGap;
+   return ::hinalea::DisplayMode::RawEveryGap;
 //    return ::hinalea::DisplayMode::ProcessedPseudoRgb;
 }
 
 auto MainWindow::realtimeMode(
     ) const -> ::hinalea::Realtime::RealtimeModeVariant
 {
-    return ::hinalea::RealtimeMode::ProcessedWavelength;
-//    return ::hinalea::RealtimeMode::RawChannelSignals;
+    switch ( ui->modeComboBox->currentIndex( ) )
+    {
+        case 0: /* This is for static mode, but just use processed wavelengths as its fallback if needed. */
+        case 1:
+        {
+            return ::hinalea::RealtimeMode::ProcessedWavelength;
+        }
+        case 2:
+        {
+            return ::hinalea::RealtimeMode::RawChannelSignals;
+        }
+        case 3:
+        {
+            return ::hinalea::RealtimeMode::FreeFly;
+        }
+    }
+
+    Q_UNREACHABLE( );
+}
+
+auto MainWindow::movePattern(
+    ) const -> ::hinalea::MovePatternVariant
+{
+    switch ( ui->movePatternComboBox->currentIndex( ) )
+    {
+        case 0:
+        {
+            return ::hinalea::MovePattern::Forward;
+        }
+        case 1:
+        {
+            return ::hinalea::MovePattern::Backward;
+        }
+        case 2:
+        {
+            return ::hinalea::MovePattern::Alternate;
+        }
+    }
+
+    Q_UNREACHABLE( );
 }
 
 auto MainWindow::measurementType(
@@ -721,6 +874,8 @@ auto MainWindow::measurementType(
         case 0: { return ::hinalea::MeasurementType::Raw;   }
         case 1: { return ::hinalea::MeasurementType::White; }
         case 2: { return ::hinalea::MeasurementType::Dark;  }
+        case 3: { return ::hinalea::MeasurementType::Raw;   } // Proxy for Realtime Model
+        // case 3: { return ::hinalea::MeasurementType::FlatField; } // Not implemented
     }
 
     Q_UNREACHABLE( );
@@ -761,7 +916,7 @@ auto MainWindow::xAxisTitle(
 {
     return ::std::visit(
         ::hinalea::overloaded{
-            [ ]( ::hinalea::RealtimeMode::ProcessedWavelength_t )
+            [ ]( auto ) // ProcessedWavelength_t & RealtimeMode::FreeFly_t
             {
                 return QObject::tr( "Wavelength (nm)" );
             },
@@ -779,7 +934,8 @@ auto MainWindow::yAxisTitle(
 {
     return this->realtimeReflectanceIsActive( )
         ? QObject::tr( "Reflectance" )
-        : QObject::tr( "Intensity" );
+        : QObject::tr( "Intensity" )
+        ;
 }
 
 auto MainWindow::xAxisRange(
@@ -787,7 +943,7 @@ auto MainWindow::xAxisRange(
 {
     return ::std::visit(
         ::hinalea::overloaded{
-            [ this ]( ::hinalea::RealtimeMode::ProcessedWavelength_t )
+            [ this ]( auto ) // ProcessedWavelength_t & FreeFly_t
             {
                 auto const wavelengths = this->realtime.band_wavelengths( );
                 HINALEA_ASSERT( not wavelengths.empty( ) );
@@ -849,9 +1005,12 @@ try
 
     this->updateDark( );
 
-    auto const rect = this->camera.qt_region_of_interest( );
-    ui->imageView->scene( )->setSceneRect( rect );
-    ui->imageView->fitInView( rect, Qt::KeepAspectRatio );
+    {
+        auto rect = this->camera.qt_region_of_interest( );
+        rect.moveTopLeft( QPoint{ 0, 0 } );
+        ui->imageView->scene( )->setSceneRect( rect );
+        ui->imageView->fitInView( rect, Qt::KeepAspectRatio );
+    }
 
     this->displayItem->show( );
     this->displayItem->setPixmap( QPixmap{ this->camera.qt_size( ) } );
@@ -869,7 +1028,18 @@ try
             {
                 try
                 {
-                    this->realtime.run( );
+                    if ( ::hinalea::RealtimeMode::FreeFly_t::in( this->realtimeMode( ) ) )
+                    {
+                        ::hinalea::check_error(
+                            hinalea_realtime_run_free_fly_v2(
+                                this->realtime.c_api( )
+                                )
+                            );
+                    }
+                    else
+                    {
+                        this->realtime.run( );
+                    }
                 }
                 catch ( ::std::exception const & exc )
                 {
@@ -902,7 +1072,9 @@ auto MainWindow::powerOff(
     if ( not this->displaySemaphore.tryAcquire( ) )
     {
         QApplication::processEvents( );
-        this->displaySemaphore.acquire( );
+        auto const timeout = ::std::chrono::duration_cast< ::std::chrono::milliseconds >( this->exposure( ) );
+        /* Use timeout.count( ) since Qt5 QSemaphore does not have chrono overloads. */
+        this->displaySemaphore.tryAcquire( 1, timeout.count( ) );
     }
 
     auto const releaser = QSemaphoreReleaser{ this->displaySemaphore };
@@ -968,7 +1140,26 @@ auto MainWindow::powerOnAcquisition(
         [ this ]
         {
             this->setupAll( );
+#if 01
+            {
+                auto constexpr qImageAlignment = 64;
+                auto const channels = static_cast< ::hinalea::Size >( this->displayChannels( ) );
+                auto const alignment = ::std::max( this->camera.alignment( ), ::hinalea::Size{ qImageAlignment } );
+                auto const width = this->camera.width( );
+                auto const bpp = this->camera.bit_depth( ) / CHAR_BIT;
+                this->displayLinePitch = channels * width * bpp;
+                this->displayLinePitch += this->displayLinePitch % qImageAlignment;
+                auto const bytes = this->camera.height( ) * this->displayLinePitch;
+                this->displayImage = ::hinalea::make_aligned< ::std::byte[ ] >( alignment, bytes );
+// HINALEA_COUT( channels, alignment, width, bpp, displayLinePitch );
+                if ( not this->displayImage )
+                {
+                    throw ::std::bad_alloc{ };
+                }
+            }
+#else
             this->displayImage = this->camera.allocate_image( this->displayChannels( ) );
+#endif
             this->camera.start_acquisition( );
         };
 
@@ -1004,16 +1195,73 @@ auto MainWindow::powerOnRealtime(
 
     this->setupAll( );
 
-    /* Realtime images are always 8-bit images with 3 channels. */
-    this->displayImage = hinalea::make_aligned< ::std::byte[ ] >( this->camera.alignment( ), 3 * this->camera.area( ) );
-
+    this->displayImage = this->realtime.allocate_image( );
     this->realtime.set_display_mode( this->displayMode( ) );
     this->realtime.set_selected_index( 0 );
-    this->realtime.set_gap_path( this->gapPath( ) );
+
+    if ( ::hinalea::RealtimeMode::FreeFly_t::in( this->realtimeMode( ) ) )
+    {
+        auto const freeFlyPath = ::pathCast( ui->freeFlyLineEdit->text( ) );
+        auto const freeFlyView = ::hinalea::path_string_view{ freeFlyPath.native( ) };
+
+        ::hinalea::check_error(
+            ::hinalea_realtime_set_free_fly_path_v2(
+                this->realtime.c_api( ),
+                freeFlyView.data( ),
+                freeFlyView.size( )
+                )
+            );
+
+#if 01
+        // tl must be evens for PVCAM
+        // br must be odds for PVCAM
+        #if 0
+        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 100, 100 }; // :)
+        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 200, 200 }; // get image but rectangular and no spectra
+        auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 300, 300 }; // :(
+        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 400, 400 }; // :(
+        // auto const br = ::hinalea::Point2D< ::hinalea::Int >{ 500 - 1, 500 - 1 };
+        auto const br = ::hinalea::Point2D< ::hinalea::Int >{ 450 - 1, 500 - 1 };
+        #else
+        auto const tl = ::hinalea::Point2D< ::hinalea::Int >{
+            300, 400
+            // ui->topLeftXSpinBox->value( ),
+            // ui->topLeftYSpinBox->value( )
+            };
+        auto const br = ::hinalea::Point2D< ::hinalea::Int >{
+            349, 449
+            // ui->bottomRightXSpinBox->value( ),
+            // ui->bottomRightYSpinBox->value( )
+            };
+        #endif
+        auto const roi = ::hinalea::Roi{ tl, br };
+HINALEA_COUT( tl, br, roi );
+
+        // FIXME: Roi{ 0, 0, 0, 0 }.area( ) == 1
+        if ( tl.x( ) + tl.y( ) + br.x( ) + br.y( ) ) /* All 0s indicates use full ROI. */
+        {
+            if ( not this->camera.set_region_of_interest( roi ) )
+            {
+                QMessageBox::critical( this, QObject::tr( "Error" ), QObject::tr( "Failed to setup ROI." ) );
+                return false;
+            }
+            else
+            {
+                this->displayImage = this->realtime.allocate_image( );
+            }
+        }
+#endif
+    }
+    else
+    {
+        this->realtime.set_gap_path( this->gapPath( ) );
+    }
+
     this->realtime.set_matrix_path( this->matrixPath( ) );
     this->realtime.set_white_path( this->whitePath( ) );
     this->realtime.set_use_reflectance( ui->reflectanceCheckBox->isChecked( ) );
     this->realtime.set_classify_callback( this->classifyCallback_ );
+    this->realtime.set_move_pattern_process( this->movePattern( ) );
 
     if ( not this->realtime.setup( this->realtimeMode( ) ) )
     {
@@ -1032,14 +1280,7 @@ auto MainWindow::record(
 {
     ::joinThread( this->recordThread );
     this->setupAcquisition( );
-
-    /* Format will be: YYYYMMDD_hhmmss. */
-    auto datetime = QDateTime::currentDateTime( ).toString( Qt::ISODate );
-    datetime.remove( ':' );
-    datetime.remove( '-' );
-    datetime.replace( 'T', '_' );
-
-    auto id = datetime.toStdString( );
+    auto id = ::makeTimestamp( ).toStdString( );
 
     auto const name = id + ::std::visit(
         ::hinalea::overloaded{
@@ -1083,15 +1324,27 @@ auto MainWindow::cancel(
         qInfo( ) << "Recording cancelled.";
     }
 
-    this->acquisition.cancel( );
-    this->realtime.cancel( );
+    if ( this->acquisition.is_open( ) )
+    {
+        this->acquisition.cancel( );
+    }
+
+    if ( this->realtime.is_open( ) )
+    {
+        this->realtime.cancel( );
+    }
 }
 
 auto MainWindow::process(
     ) -> void
 {
     ::joinThread( this->processThread );
-    auto const dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load raw data directory." ), ::pathCast( ::ioDir( ) / HINALEA_PATH( "raw" ) ) );
+    auto const dir = QFileDialog::getExistingDirectory(
+        this,
+        QObject::tr( "Load raw data directory." ),
+        // ::pathCast( ::ioDir( ) / HINALEA_PATH( "raw" ) )
+"C:/Users/MattEding/Desktop/YaYa Scientific Legacy Calibration" // FIXME: testing
+        );
 
     if ( dir.isEmpty( ) )
     {
@@ -1100,7 +1353,11 @@ auto MainWindow::process(
 
     if ( dir.endsWith( "_dark" ) )
     {
-        QMessageBox::information( this, QObject::tr( "Process Information" ), QObject::tr( "Dark data does not need to be processed." ) );
+        QMessageBox::information(
+            this,
+            QObject::tr( "Process Information" ),
+            QObject::tr( "Dark data does not need to be processed." )
+            );
         return;
     }
 
@@ -1139,28 +1396,54 @@ auto MainWindow::allSeries(
 }
 
 auto MainWindow::setupAxis(
-    HINALEA_IN Qt::Orientation const                    orientation,
-    HINALEA_IN QString const &                          title,
-    HINALEA_IN ::std::array< ::hinalea::Real, 2 > const values
+    HINALEA_IN Qt::Orientation                    const   orientation,
+    HINALEA_IN QString                            const & title,
+    HINALEA_IN ::std::array< ::hinalea::Real, 2 > const   values,
+    HINALEA_IN QDoubleSpinBox *                   const   lowerSpinBox,
+    HINALEA_IN QDoubleSpinBox *                   const   upperSpinBox
     ) -> void
 {
     HINALEA_ASSERT( not values.empty( ) );
     auto const axes = this->chart->axes( orientation );
     auto * const axis = axes[ 0 ];
-    axis->setRange( values.front( ), values.back( ) );
+    auto const [ lower, upper ] = values;
+    axis->setRange( lower, upper );
     axis->setTitleText( title );
+    lowerSpinBox->setRange(lower, upper );
+    lowerSpinBox->setValue( lower );
+    upperSpinBox->setRange( lower, upper );
+    upperSpinBox->setValue( upper );
+
+    // if ( ( orientation == Qt::Vertical )
+    //  and ( upperSpinBox->value( ) == upperSpinBox->minimum( ) ) )
+    // {
+    //     upperSpinBox->setValue( upper );
+    //     this->onYAxisRangeChanged( );
+    // }
 }
 
 auto MainWindow::setupXAxis(
     ) -> void
 {
-    this->setupAxis( Qt::Horizontal, this->xAxisTitle( ), this->xAxisRange( ) );
+    this->setupAxis(
+        Qt::Horizontal,
+        this->xAxisTitle( ),
+        this->xAxisRange( ),
+        ui->xAxisLowerSpinBox,
+        ui->xAxisUpperSpinBox
+        );
 }
 
 auto MainWindow::setupYAxis(
     ) -> void
 {
-    this->setupAxis( Qt::Vertical, this->yAxisTitle( ), this->yAxisRange( ) );
+    this->setupAxis(
+        Qt::Vertical,
+        this->yAxisTitle( ),
+        this->yAxisRange( ),
+        ui->yAxisLowerSpinBox,
+        ui->yAxisUpperSpinBox
+        );
 }
 
 auto MainWindow::setupAcquisition(
@@ -1174,28 +1457,29 @@ auto MainWindow::setupAcquisition(
 auto MainWindow::setupProcess(
     ) -> void
 {
-    if ( not ::hinalea::fs::is_directory( this->whitePath( ) ) )
+    auto cube_type = ::hinalea::CubeType::Intensity;
+
+    if ( ::hinalea::fs::is_directory( this->whitePath( ) ) )
     {
-        this->processor.set_cube_type( ::hinalea::CubeType::Intensity );
-    }
-    else
-    {
-        this->processor.set_cube_type( ::hinalea::CubeType::Intensity | ::hinalea::CubeType::Reflectance );
+        cube_type or_eq ::hinalea::CubeType::Reflectance;
     }
 
+    if ( ui->measurementTypeComboBox->currentText( ) == "Realtime Model" )
+    {
+        cube_type or_eq ::hinalea::CubeType::RealtimeModel;
+    }
+
+    this->processor.set_cube_type( cube_type );
 
     this->processor.set_data_type( ::hinalea::DataType::Float32 );
     // this->processor.set_scale_factor( ::hinalea::ndebug ? 0.5 : 0.1 ); /* make processing faster for debugging purposes */
     this->processor.set_scale_factor( 1.0 );
-    this->processor.set_smooth_size( ui->smoothSpinBox->value( ) );
+    this->processor.set_spatial_smooth_size( ui->smoothSpinBox->value( ) );
+    this->processor.set_spectral_smooth_size( ui->smoothSpinBox->value( ) );
     this->processor.set_settings_path( this->settingsPath( ) );
 
     this->processor.set_suffix( ::hinalea::CubeType::Intensity  , HINALEA_PATH( "" ) );
     this->processor.set_suffix( ::hinalea::CubeType::Reflectance, HINALEA_PATH( "_ref" ) );
-
-this->processor.set_cube_type( ::hinalea::CubeType::Intensity | ::hinalea::CubeType::RealtimeModel );
-this->processor.set_suffix( ::hinalea::CubeType::RealtimeModel, HINALEA_PATH( "_rm" ) );
-this->processor.set_scale_factor( 0.25 );
 }
 
 auto MainWindow::setupBitDepth(
@@ -1234,8 +1518,14 @@ auto MainWindow::setupExposure(
         };
 
     auto const [ lowerExposure, upperExposure ] = this->camera.exposure_limits( );
-    auto const minExposure = qMax( uiCast( lowerExposure ), ::UiExposure{ 1 } );
-    auto const maxExposure = qMin( uiCast( upperExposure ), ::std::chrono::duration_cast< ::UiExposure >( ::hinalea::MillisecondsI{ 500 } ) );
+    auto const minExposure = qMax(
+        uiCast( lowerExposure ),
+        ::UiExposure{ 1 }
+        );
+    auto const maxExposure = qMin(
+        uiCast( upperExposure ),
+        ::std::chrono::duration_cast< ::UiExposure >( ::hinalea::MillisecondsI{ 500 } )
+        );
     ui->exposureSpinBox->setRange( minExposure.count( ), maxExposure.count( ) );
     this->camera.set_exposure( this->exposure( ) );
 }
@@ -1276,6 +1566,7 @@ auto MainWindow::setupGapIndex(
         auto const maxGapIndex = static_cast< int >( gapIndexes.back( ) );
         ui->gapIndexSpinBox->setRange( minGapIndex, maxGapIndex );
         this->fpi.set_gap_index( this->gapIndex( ) );
+        // this->fpi.set_gap_index_async( this->gapIndex( ) );
     }
 }
 
@@ -1361,7 +1652,11 @@ auto MainWindow::updateWhite(
 auto MainWindow::updateDark(
     ) -> void
 {
-    this->acquisition.set_dark_path( this->darkPath( ) );
+    auto const path = ui->activeDarkButton->isChecked( )
+        ? this->darkPath( )
+        : ::hinalea::fs::path{ }
+        ;
+    this->acquisition.set_dark_path( path );
 }
 
 template < >
@@ -1379,6 +1674,13 @@ auto MainWindow::updateSeries< ::hinalea::RealtimeMode::ProcessedWavelength_t >(
     }
 
     ::debugSeries( this->seriesL );
+}
+
+template < >
+auto MainWindow::updateSeries< ::hinalea::RealtimeMode::FreeFly_t >(
+    ) -> void
+{
+    this->updateSeries< ::hinalea::RealtimeMode::ProcessedWavelength_t >( );
 }
 
 template < >
@@ -1441,7 +1743,10 @@ auto MainWindow::updateImageTimerInterval(
     ) -> void
 {
     using namespace ::std::chrono_literals;
-    auto const interval = qMax( 30ms, ::std::chrono::ceil< ::std::chrono::milliseconds >( this->exposure( ) ) );
+    auto const interval = qMax(
+        30ms,
+        ::std::chrono::ceil< ::std::chrono::milliseconds >( this->exposure( ) )
+        );
     this->displayTimer->setInterval( interval );
 }
 
@@ -1470,7 +1775,7 @@ try
             this->ignoreCount( )
             );
         auto const fps = this->camera.frames_per_second( );
-        Q_EMIT this->doUpdateStatistics( min, max, saturation, fps );
+        Q_EMIT this->doUpdateStatistics( min, max, saturation, fps, ui->cpsSpinBox->minimum( ) );
     }
 
     auto const channels = this->displayChannels( );
@@ -1483,7 +1788,21 @@ try
     else
     {
         /* RGB sensor, need to convert monochrome color filter array into RGBA image. */
+#if 01
+        ::hinalea::demosaic(
+            rawImage.get( ),
+            this->displayImage.get( ),
+            this->camera.width( ),
+            this->camera.height( ),
+            this->camera.bit_depth( ),
+            this->camera.line_pitch( ),
+            this->displayLinePitch,
+            this->camera.color_filter_array( ),
+            channels
+            );
+#else
         ::hinalea::demosaic( this->camera, rawImage, this->displayImage, channels );
+#endif
     }
 
     if ( this->displayTimer->isActive( ) )
@@ -1510,11 +1829,20 @@ try
         return;
     }
 
+#if 0
+    if ( static auto counter = 0; counter < 100 )
+    {
+        auto qimage = this->realtime.qt_image( this->displayImage );
+        [[ maybe_unused ]]
+        bool const ok = qimage.save( QStringLiteral( "C:/Users/MattEding/Desktop/test/roi%0.png" ).arg( counter++ ) );
+    }
+#endif
+
     {
         auto const [ min, max ] = this->realtime.min_max_values( );
-        // auto const fps = this->camera.frames_per_second( );
-        auto const fps = this->realtime.actual_fps( );
-        Q_EMIT this->doUpdateStatistics( min, max, ui->saturationSpinBox->minimum( ), fps );
+        auto const fps = this->camera.frames_per_second( );
+        auto const cps = this->realtime.cube_rate( );
+        Q_EMIT this->doUpdateStatistics( min, max, ui->saturationSpinBox->minimum( ), fps, cps );
     }
 
     if ( this->displayTimer->isActive( ) )
@@ -1548,7 +1876,8 @@ auto MainWindow::enablePowerWidgets(
         widget->setEnabled( enable );
     }
 
-    ui->recordButton->setEnabled( enable and ( this->operationMode( ) == OperationMode::StaticMode ) );
+    // ui->recordButton->setEnabled( enable and ( this->operationMode( ) == OperationMode::StaticMode ) );
+    ui->recordButton->setEnabled( enable );
 
     for ( auto * const widget : ::std::initializer_list< QWidget * >{
         ui->binningGroupBox,
@@ -1604,21 +1933,56 @@ auto MainWindow::onUpdateImage(
 {
     auto const releaser = QSemaphoreReleaser{ this->displaySemaphore };
     auto const channels = this->displayChannels( );
+
+    // FIXME: (1) good for Kinetix, (2) good for Matrix Vision at 16-bit
+#if 01
+    auto qImage = QImage{
+        reinterpret_cast< uchar * >( this->displayImage.get( ) ),
+        this->camera.width( ),
+        this->camera.height( ),
+        this->displayLinePitch,
+        ( this->operationMode() == OperationMode::StaticMode )
+            ? this->camera.qt_format( channels )
+            : QImage::Format::Format_RGB888
+        }.copy( );
+#else
     auto qImage = this->camera.qt_image( this->displayImage, channels );
+#endif
     this->displayItem->setPixmap( QPixmap::fromImage( ::std::move( qImage ) ) );
 }
 
+auto MainWindow::onUpdateClassify(
+    ) -> void
+{
+    // TODO: the classes might need to be saved in callback function to make sure no data races while reading data?
+    auto const classes = this->spectral_metric.classes( );
+    auto const qSize = this->camera.qt_size( );
+
+    auto classifyImage = QImage{
+        classes.data( ),
+        qSize.width( ),
+        qSize.height( ),
+        qSize.width( ),
+        QImage::Format_Indexed8
+        };
+
+    this->setupClassifyColorTable( classifyImage );
+    this->classifyItem->setPixmap( QPixmap::fromImage( ::std::move( classifyImage ) ) );
+}
+
 auto MainWindow::onUpdateStatistics(
-    HINALEA_IN int const    min,
-    HINALEA_IN int const    max,
-    HINALEA_IN int const    saturation,
-    HINALEA_IN double const fps
+    HINALEA_IN int    const min,
+    HINALEA_IN int    const max,
+    HINALEA_IN int    const saturation,
+    HINALEA_IN double const fps,
+    HINALEA_IN double const cps
     ) -> void
 {
     ui->minSpinBox->setValue( min );
     ui->maxSpinBox->setValue( max );
     ui->saturationSpinBox->setValue( saturation );
     ui->fpsSpinBox->setValue( fps );
+    ui->cpsSpinBox->setValue( cps );
 }
 
 auto MainWindow::onDisplayTimerTimeout(
@@ -1678,13 +2042,29 @@ auto MainWindow::onRecordButtonToggled(
     HINALEA_IN bool const checked
     ) -> void
 {
-    if ( checked )
+    if ( this->operationMode( ) == OperationMode::StaticMode )
     {
-        this->record( );
+        if ( checked )
+        {
+            this->record( );
+        }
+        else
+        {
+            this->cancel( );
+        }
     }
     else
     {
-        this->cancel( );
+        if ( checked )
+        {
+            auto const id = ::makeTimestamp( ).toStdWString( );
+            auto realtimeDir = ::ioDir( ) / HINALEA_PATH( "realtime" ) / id;
+            this->realtime.save( realtimeDir );
+
+            /* Realtime saving is a snapshot so reset the record button. */
+            auto const blocker = QSignalBlocker{ ui->recordButton };
+            ui->recordButton->setChecked( false );
+        }
     }
 }
 
@@ -1835,16 +2215,30 @@ auto MainWindow::onLoadSettingsClicked(
     {
         /* NOTE:
          * We support two settings formats. They are usually as follows:
-         * 1) "./db/settings" file
+         * 1) "./db/settings" file without extension
          * 2) "./calib/SENSOR_NAME" directory
          */
-        if ( auto const settings = ::hinalea::fs::path{ dir.toStdString( ) } / HINALEA_PATH( "settings" );
-            ::hinalea::fs::is_regular_file( settings ) )
+        for ( auto const & entry : ::hinalea::fs::directory_iterator( pathCast( dir ) ) )
         {
-            dir += "/settings";
+            if ( entry.is_regular_file( ) and entry.path( ).extension( ).empty( ) )
+            {
+                dir = pathCast( entry );
+                qDebug( ) << dir;
+                break;
+            }
         }
 
         ui->settingsLineEdit->setText( dir );
+    }
+}
+
+auto MainWindow::onLoadFreeFlyClicked(
+    ) -> void
+{
+    if ( auto file = QFileDialog::getOpenFileName( this, QObject::tr( "Load free fly FPI parameters file." ) );
+         not file.isEmpty( ) )
+    {
+        ui->freeFlyLineEdit->setText( file );
     }
 }
 
@@ -1865,7 +2259,13 @@ auto MainWindow::onLoadDarkClicked(
     if ( auto const dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load raw dark directory." ) );
          not dir.isEmpty( ) )
     {
+        {
+            auto const blocker = QSignalBlocker{ ui->activeDarkButton };
+            ui->activeDarkButton->setChecked( true );
+        }
+
         ui->darkLineEdit->setText( dir );
+        this->darkDirectory = dir;
         this->updateDark( );
     }
 }
@@ -1896,6 +2296,12 @@ auto MainWindow::onClearSettingsClicked(
     ui->settingsLineEdit->clear( );
 }
 
+auto MainWindow::onClearFreeFlyClicked(
+    ) -> void
+{
+    ui->freeFlyLineEdit->clear( );
+}
+
 auto MainWindow::onClearWhiteClicked(
     ) -> void
 {
@@ -1906,6 +2312,8 @@ auto MainWindow::onClearDarkClicked(
     ) -> void
 {
     ui->darkLineEdit->clear( );
+    this->darkDirectory.clear( );
+    this->updateDark( );
 }
 
 auto MainWindow::onClearMatrixClicked(
@@ -1920,12 +2328,23 @@ auto MainWindow::onClearGapClicked(
     ui->gapLineEdit->clear( );
 }
 
+auto MainWindow::onActiveDarkToggled(
+    HINALEA_IN bool const checked
+    ) -> void
+{
+    HINALEA_UNUSED( checked );
+    this->updateDark( );
+}
+
 auto MainWindow::onReflectanceCheckBoxToggled(
     HINALEA_IN bool const checked
     ) -> void
 {
-    this->realtime.set_use_reflectance( checked );
-    this->setupYAxis( );
+    if ( this->realtime.is_open( ) )
+    {
+        this->realtime.set_use_reflectance( checked );
+        this->setupYAxis( );
+    }
 }
 
 auto MainWindow::onProgressChanged(
@@ -1959,12 +2378,58 @@ auto MainWindow::onThreadFailed(
     QMessageBox::critical( this, title, what );
 }
 
-auto MainWindow::classifyCallback(
-    HINALEA_IN ::hinalea::DataCube const & data_cube,
-    HINALEA_IN void const * const          endmembers,
-    HINALEA_IN ::hinalea::Int const        observations
+auto MainWindow::onXAxisRangeChanged(
     ) -> void
 {
+    auto const axes = this->chart->axes( Qt::Horizontal );
+    auto * const axis = axes[ 0 ];
+    axis->setRange( ui->xAxisLowerSpinBox->value( ), ui->xAxisUpperSpinBox->value( ) );
+}
+
+auto MainWindow::onYAxisRangeChanged(
+    ) -> void
+{
+    auto const axes = this->chart->axes( Qt::Vertical );
+    auto * const axis = axes[ 0 ];
+    axis->setRange( ui->yAxisLowerSpinBox->value( ), ui->yAxisUpperSpinBox->value( ) );
+}
+
+auto MainWindow::onFpiSleepFactorChanged(
+    ) -> void
+{
+    if ( this->realtime.is_open( ) )
+    {
+        this->realtime.set_fpi_sleep_time_factors(
+            ui->consecutiveSpinBox->value( ),
+            ui->resetSpinBox->value( )
+            );
+    }
+}
+
+auto MainWindow::onMovePatternComboBoxCurrentIndexChanged(
+    HINALEA_IN int const index
+    ) -> void
+{
+    HINALEA_UNUSED( index );
+
+    if ( this->realtime.is_open( ) )
+    {
+        this->realtime.set_move_pattern_process( this->movePattern( ) );
+    }
+}
+
+auto MainWindow::classifyCallback(
+    HINALEA_IN ::hinalea::DataCube const & data_cube,
+    HINALEA_IN void const *        const   endmembers,
+    HINALEA_IN ::hinalea::Int      const   observations
+    ) -> void
+{
+    // FIXME: testing
+    // if ( qIsNull( ui->thresholdSpinBox->value( ) ) )
+    {
+        return;
+    }
+
     using T = HINALEA_TYPEOF( this->spectral_metric )::value_type;
 
     HINALEA_ASSERT_MSG(
@@ -1992,19 +2457,9 @@ auto MainWindow::classifyCallback(
 
     this->spectral_metric.fit( X, Y );
     this->spectral_metric.classify( ui->thresholdSpinBox->value( ) );
-    auto const classes = this->spectral_metric.classes( );
-    auto const qSize = this->camera.qt_size( );
 
-    auto classifyImage = QImage{
-        classes.data( ),
-        qSize.width( ),
-        qSize.height( ),
-        qSize.width( ),
-        QImage::Format_Indexed8
-        };
-
-    this->setupClassifyColorTable( classifyImage );
-    this->classifyItem->setPixmap( QPixmap::fromImage( ::std::move( classifyImage ) ) );
+    // FIXME: crashed with [X]'d application?
+    Q_EMIT this->doUpdateClassify( );
 }
 
 auto MainWindow::mousePressEvent(
