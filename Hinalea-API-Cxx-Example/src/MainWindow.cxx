@@ -1212,34 +1212,26 @@ auto MainWindow::powerOnRealtime(
                 )
             );
 
-#if 01
-        // tl must be evens for PVCAM
-        // br must be odds for PVCAM
-        #if 0
-        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 100, 100 }; // :)
-        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 200, 200 }; // get image but rectangular and no spectra
-        auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 300, 300 }; // :(
-        // auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ 400, 400 }; // :(
-        // auto const br = ::hinalea::Point2D< ::hinalea::Int >{ 500 - 1, 500 - 1 };
-        auto const br = ::hinalea::Point2D< ::hinalea::Int >{ 450 - 1, 500 - 1 };
-        #else
-        auto const tl = ::hinalea::Point2D< ::hinalea::Int >{
-            300, 400
-            // ui->topLeftXSpinBox->value( ),
-            // ui->topLeftYSpinBox->value( )
-            };
-        auto const br = ::hinalea::Point2D< ::hinalea::Int >{
-            349, 449
-            // ui->bottomRightXSpinBox->value( ),
-            // ui->bottomRightYSpinBox->value( )
-            };
-        #endif
-        auto const roi = ::hinalea::Roi{ tl, br };
-HINALEA_COUT( tl, br, roi );
+        auto tl_x = ui->topLeftXSpinBox->value( );
+        auto tl_y = ui->topLeftYSpinBox->value( );
+        auto br_x = ui->bottomRightXSpinBox->value( );
+        auto br_y =ui->bottomRightYSpinBox->value( );
 
         // FIXME: Roi{ 0, 0, 0, 0 }.area( ) == 1
-        if ( tl.x( ) + tl.y( ) + br.x( ) + br.y( ) ) /* All 0s indicates use full ROI. */
+        if ( tl_x + tl_y + br_x + br_y ) /* All 0s indicates use full ROI. */
         {
+            // tl must be evens for PVCAM
+            tl_x = ::std::max( 0, ::hinalea::is_even( tl_x ) ? tl_x : tl_x - 1 );
+            tl_y = ::std::max( 0, ::hinalea::is_even( tl_y ) ? tl_y : tl_y - 1 );
+            auto const tl = ::hinalea::Point2D< ::hinalea::Int >{ tl_x, tl_y };
+
+            // br must be odds for PVCAM
+            br_x = ::std::max( 1, ::hinalea::is_odd( br_x ) ? br_x : br_x - 1 );
+            br_y = ::std::max( 1, ::hinalea::is_odd( br_y ) ? br_y : br_y - 1 );
+            auto const br = ::hinalea::Point2D< ::hinalea::Int >{ br_x, br_y };
+
+            auto const roi = ::hinalea::Roi{ tl, br };
+
             if ( not this->camera.set_region_of_interest( roi ) )
             {
                 QMessageBox::critical( this, QObject::tr( "Error" ), QObject::tr( "Failed to setup ROI." ) );
@@ -1250,7 +1242,6 @@ HINALEA_COUT( tl, br, roi );
                 this->displayImage = this->realtime.allocate_image( );
             }
         }
-#endif
     }
     else
     {
