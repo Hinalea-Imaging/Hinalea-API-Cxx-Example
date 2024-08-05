@@ -76,6 +76,7 @@ try
 #if 0
         ::hinalea::Log::All
 #else
+        // ::hinalea::Log::Info |
         // ::hinalea::Log::Warning |
         ::hinalea::Log::Error |
         ::hinalea::Log::Critical

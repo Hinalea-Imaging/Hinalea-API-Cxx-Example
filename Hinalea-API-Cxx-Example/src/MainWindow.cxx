@@ -36,6 +36,12 @@ HINALEA_API(
     HINALEA_IN                             hinalea_size                free_fly_path_size
     );
 
+HINALEA_EXTERN_C
+HINALEA_API(
+    hinalea_realtime_adjust_frame_rate_coefficient_v2,
+    HINALEA_IN hinalea_RealtimeHandle_v2 * realtime
+    );
+
 namespace {
 
 auto debugSeries(
@@ -818,7 +824,7 @@ auto MainWindow::displayMode(
 {
     // return ::hinalea::DisplayMode::RawSelectedGap;
    return ::hinalea::DisplayMode::RawEveryGap;
-//    return ::hinalea::DisplayMode::ProcessedPseudoRgb;
+    // return ::hinalea::DisplayMode::ProcessedPseudoRgb;
 }
 
 auto MainWindow::realtimeMode(
@@ -1049,6 +1055,16 @@ try
             };
     }
 
+    // TAstle: Use singleshot timer to wait for frame rate to stabilize before adjusting
+    auto const adjust_frame_rate_coefficient = [ & ]( ){
+        ::hinalea::check_error(
+            hinalea_realtime_adjust_frame_rate_coefficient_v2(
+                this->realtime.c_api( )
+                )
+            );
+    };
+    QTimer::singleShot( 10000, adjust_frame_rate_coefficient );
+
     this->updateImageTimerInterval( );
     this->displayTimer->start( );
 
@@ -1215,7 +1231,7 @@ auto MainWindow::powerOnRealtime(
         auto tl_x = ui->topLeftXSpinBox->value( );
         auto tl_y = ui->topLeftYSpinBox->value( );
         auto br_x = ui->bottomRightXSpinBox->value( );
-        auto br_y =ui->bottomRightYSpinBox->value( );
+        auto br_y = ui->bottomRightYSpinBox->value( );
 
         // FIXME: Roi{ 0, 0, 0, 0 }.area( ) == 1
         if ( tl_x + tl_y + br_x + br_y ) /* All 0s indicates use full ROI. */
