@@ -10,6 +10,8 @@
 #include <thread>
 
 #ifdef HINALEA_INTERNAL
+/* NOTE: Free fly mode is undocumented and will __not__ recieve any support from Hinalea for how to use it. */
+#define HINALEA_FREE_FLY
 inline auto constexpr hinalea_internal = true;
 #else /* HINALEA_INTERNAL */
 inline auto constexpr hinalea_internal = false;
@@ -39,8 +41,8 @@ QT_END_NAMESPACE
 QT_USE_NAMESPACE
 
 /* The UI is set to show milliseconds by default. If you wish to use microseconds instead, change the value to `false`. */
-inline bool constexpr ui_exposure_is_milliseconds = false;
-// inline bool constexpr ui_exposure_is_milliseconds = true;
+// inline bool constexpr ui_exposure_is_milliseconds = false;
+inline bool constexpr ui_exposure_is_milliseconds = true;
 
 using UiExposure = ::std::conditional_t<
     ::ui_exposure_is_milliseconds,
@@ -459,8 +461,10 @@ private:
     auto onLoadSettingsClicked(
         ) -> void;
 
+    #ifdef HINALEA_FREE_FLY
     auto onLoadFreeFlyClicked(
         ) -> void;
+    #endif
 
     auto onLoadWhiteClicked(
         ) -> void;
@@ -477,8 +481,10 @@ private:
     auto onClearSettingsClicked(
         ) -> void;
 
+    #ifdef HINALEA_FREE_FLY
     auto onClearFreeFlyClicked(
         ) -> void;
+    #endif
 
     auto onClearWhiteClicked(
         ) -> void;

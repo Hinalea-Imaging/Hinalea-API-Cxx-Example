@@ -37,13 +37,13 @@
       <item>
        <widget class="QSpinBox" name="minSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
         </property>
         <property name="buttonSymbols">
-         <enum>QAbstractSpinBox::NoButtons</enum>
+         <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
         </property>
         <property name="specialValueText">
          <string>N/A</string>
@@ -69,13 +69,13 @@
       <item>
        <widget class="QSpinBox" name="maxSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
         </property>
         <property name="buttonSymbols">
-         <enum>QAbstractSpinBox::NoButtons</enum>
+         <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
         </property>
         <property name="specialValueText">
          <string>N/A</string>
@@ -101,13 +101,13 @@
       <item>
        <widget class="QSpinBox" name="saturationSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
         </property>
         <property name="buttonSymbols">
-         <enum>QAbstractSpinBox::NoButtons</enum>
+         <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
         </property>
         <property name="specialValueText">
          <string>N/A</string>
@@ -133,13 +133,13 @@
       <item>
        <widget class="QDoubleSpinBox" name="fpsSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
         </property>
         <property name="buttonSymbols">
-         <enum>QAbstractSpinBox::NoButtons</enum>
+         <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
         </property>
         <property name="specialValueText">
          <string>N/A</string>
@@ -159,13 +159,13 @@
       <item>
        <widget class="QDoubleSpinBox" name="cpsSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
         </property>
         <property name="buttonSymbols">
-         <enum>QAbstractSpinBox::NoButtons</enum>
+         <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
         </property>
         <property name="specialValueText">
          <string>N/A</string>
@@ -175,7 +175,7 @@
       <item>
        <spacer name="statisticsSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -224,7 +224,7 @@
       <item>
        <widget class="QDoubleSpinBox" name="consecutiveSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="decimals">
          <number>1</number>
@@ -250,7 +250,7 @@
       <item>
        <widget class="QDoubleSpinBox" name="resetSpinBox">
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="decimals">
          <number>1</number>
@@ -269,7 +269,7 @@
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -657,7 +657,7 @@
          </widget>
         </item>
         <item row="0" column="5" rowspan="2">
-         <widget class="QGroupBox" name="groupBox">
+         <widget class="QGroupBox" name="roiGroupBox">
           <property name="title">
            <string>ROI</string>
           </property>
@@ -665,7 +665,7 @@
            <item row="1" column="1">
             <widget class="QSpinBox" name="bottomRightXSpinBox">
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
              <property name="maximum">
               <number>9999</number>
@@ -675,7 +675,7 @@
            <item row="0" column="2">
             <widget class="QSpinBox" name="topLeftYSpinBox">
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
              <property name="maximum">
               <number>9999</number>
@@ -685,7 +685,7 @@
            <item row="1" column="2">
             <widget class="QSpinBox" name="bottomRightYSpinBox">
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
              <property name="maximum">
               <number>9999</number>
@@ -695,7 +695,7 @@
            <item row="0" column="1">
             <widget class="QSpinBox" name="topLeftXSpinBox">
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
              <property name="maximum">
               <number>9999</number>
@@ -708,7 +708,7 @@
               <string>TL:</string>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -718,7 +718,7 @@
               <string>BR:</string>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>

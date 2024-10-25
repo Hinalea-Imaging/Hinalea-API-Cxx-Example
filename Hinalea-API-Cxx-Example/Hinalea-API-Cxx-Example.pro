@@ -27,7 +27,6 @@ DEFINES += QT_NO_DEBUG_OUTPUT
 
 DEFINES += _CRT_SECURE_NO_WARNINGS
 
-# /std:c++17 \
 QMAKE_CXXFLAGS += \
     /std:c++20 \
     /permissive- \
@@ -46,7 +45,7 @@ QMAKE_CXXFLAGS_DEBUG += \
 ###############################################################################
 # Source Files
 ##############
-c
+
 INCLUDEPATH += $$PWD/src
 
 SOURCES += \
@@ -146,7 +145,8 @@ if ( true ) {
 if ( true ) {
     # If the CUDA SDK is installed:
     # CUDA_DIR = $$clean_path( $$(CUDA_PATH) )
-    CUDA_DIR = $$clean_path( $$(CUDA_PATH_V11_7) )
+    # CUDA_DIR = $$clean_path( $$(CUDA_PATH_V11_7) )
+    CUDA_DIR = $$clean_path( $$(CUDA_PATH_V12_4) )
 
     !exists( $$CUDA_DIR ) {
         error( CUDA_DIR ( $$CUDA_DIR ) does not exist. You need to change the path to where you installed CUDA SDK. )
@@ -161,6 +161,7 @@ if ( true ) {
     LIBS += -lcublas
     LIBS += -lcublasLt
     LIBS += -lcusolver
+    LIBS += -lnppicc
 
     CUDA_DIR_PARTS = $$split( CUDA_DIR, / )
     CUDA_VERSION = $$last( CUDA_DIR_PARTS )
@@ -174,10 +175,11 @@ if ( true ) {
 
 } else {
     # Make sure the following DLL dependencies are located in the Hinalea-API-Cxx-Example/bin/ folder:
-    # cublas64_11.dll
-    # cublasLt64_11.dll
-    # cudart64_110.dll
-    # cusolver64_11.dll
+    # cublas64_12.dll
+    # cublasLt64_12.dll
+    # cudart64_12.dll
+    # cusolver64_12.dll
+    # nppicc64_12.dll
 }
 
 ###############################################################################

@@ -1,8 +1,6 @@
 #include "MainWindow.hxx"
 #include "ui_MainWindow.h"
 
-#include <Hinalea/Print.hxx>
-
 #include <QApplication>
 #include <QChart>
 #include <QDateTime>
@@ -16,12 +14,14 @@
 #include <QMouseEvent>
 #include <QSemaphoreReleaser>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
 
 #include <chrono>
 #include <iostream>
 #include <type_traits>
 
+#ifdef HINALEA_FREE_FLY
 HINALEA_EXTERN_C
 HINALEA_API(
     hinalea_realtime_run_free_fly_v2,
@@ -35,6 +35,7 @@ HINALEA_API(
     HINALEA_IN_READS( free_fly_path_size ) hinalea_path const *        free_fly_path_data,
     HINALEA_IN                             hinalea_size                free_fly_path_size
     );
+#endif
 
 namespace {
 
@@ -68,15 +69,17 @@ auto cameraTypes(
     ) -> QMap< QString, ::hinalea::CameraType > const &
 {
     static auto const map = QMap< QString, ::hinalea::CameraType >{
-        { "Allied Vision Goldeye G-130"   , ::hinalea::CameraType::M_G_130_TEC1      },
-        { "MatrixVision BlueFox3"         , ::hinalea::CameraType::M_BlueFox3_M2024C },
-        { "Photometrics Kinetix"          , ::hinalea::CameraType::M_Kinetix         },
-        { "Photometrics Prime BSI Express", ::hinalea::CameraType::M_PrimeBsiExpress },
-        { "Raptor OWL 1280"               , ::hinalea::CameraType::M_Owl1280         },
-        { "Raptor OWL 640M"               , ::hinalea::CameraType::M_Owl640M         },
-        { "Ximea xiC MC023CG-SY-UB"       , ::hinalea::CameraType::M_MC023CG_SY_UB   },
-        { "Ximea xiC MC050CG-SY-UB"       , ::hinalea::CameraType::M_MC050CG_SY_UB   },
-        { "Ximea xiQ MQ003MG-CM"          , ::hinalea::CameraType::M_MQ003MG_CM      },
+        { "Allied Vision Goldeye G-034 XSWIR 2.2 TEC", ::hinalea::CameraType::M_G_034_XSWIR_2_2_TEC2 },
+        { "Allied Vision Goldeye G-130"              , ::hinalea::CameraType::M_G_130_TEC1           },
+        { "MatrixVision BlueFox3"                    , ::hinalea::CameraType::M_BlueFox3_M2024C      },
+        { "Photometrics Kinetix"                     , ::hinalea::CameraType::M_Kinetix              },
+        { "Photometrics Prime BSI Express"           , ::hinalea::CameraType::M_PrimeBsiExpress      },
+        { "Raptor OWL 1280"                          , ::hinalea::CameraType::M_Owl1280              },
+        { "Raptor OWL 640M"                          , ::hinalea::CameraType::M_Owl640M              },
+        { "Svs-Vistek fxo993 MCX T"                  , ::hinalea::CameraType::M_Fxo_992Mcx_T         },
+        { "Ximea xiC MC023CG-SY-UB"                  , ::hinalea::CameraType::M_MC023CG_SY_UB        },
+        { "Ximea xiC MC050CG-SY-UB"                  , ::hinalea::CameraType::M_MC050CG_SY_UB        },
+        { "Ximea xiQ MQ003MG-CM"                     , ::hinalea::CameraType::M_MQ003MG_CM           },
         };
     return map;
 }
@@ -258,6 +261,14 @@ MainWindow::MainWindow(
      * Seems ok if AlliedVision is loaded first and then can safely switch between the two.
      */
     this->updateCameraType( );
+
+    #ifndef HINALEA_FREE_FLY
+    ui->freeFlyLineEdit->hide( );
+    ui->clearFreeFlyButton->hide( );
+    ui->loadFreeFlyButton->hide( );
+    ui->modeComboBox->removeItem( ui->modeComboBox->count( ) - 1 );
+    ui->roiGroupBox->hide( );
+    #endif
 }
 
 MainWindow::~MainWindow(
@@ -507,12 +518,14 @@ auto MainWindow::initConnections(
         &MainWindow::onLoadSettingsClicked
         );
 
+    #ifdef HINALEA_FREE_FLY
     QObject::connect(
         ui->loadFreeFlyButton,
         &QAbstractButton::clicked,
         this,
         &MainWindow::onLoadFreeFlyClicked
         );
+    #endif
 
     QObject::connect(
         ui->loadWhiteButton,
@@ -549,12 +562,14 @@ auto MainWindow::initConnections(
         &MainWindow::onClearSettingsClicked
         );
 
+    #ifdef HINALEA_FREE_FLY
     QObject::connect(
         ui->clearFreeFlyButton,
         &QAbstractButton::clicked,
         this,
         &MainWindow::onClearFreeFlyClicked
         );
+    #endif
 
     QObject::connect(
         ui->clearWhiteButton,
@@ -1028,6 +1043,7 @@ try
             {
                 try
                 {
+                    #ifdef HINALEA_FREE_FLY
                     if ( ::hinalea::RealtimeMode::FreeFly_t::in( this->realtimeMode( ) ) )
                     {
                         ::hinalea::check_error(
@@ -1037,6 +1053,7 @@ try
                             );
                     }
                     else
+                    #endif
                     {
                         this->realtime.run( );
                     }
@@ -1140,7 +1157,7 @@ auto MainWindow::powerOnAcquisition(
         [ this ]
         {
             this->setupAll( );
-#if 01
+#if 0
             {
                 auto constexpr qImageAlignment = 64;
                 auto const channels = static_cast< ::hinalea::Size >( this->displayChannels( ) );
@@ -1151,7 +1168,7 @@ auto MainWindow::powerOnAcquisition(
                 this->displayLinePitch += this->displayLinePitch % qImageAlignment;
                 auto const bytes = this->camera.height( ) * this->displayLinePitch;
                 this->displayImage = ::hinalea::make_aligned< ::std::byte[ ] >( alignment, bytes );
-// HINALEA_COUT( channels, alignment, width, bpp, displayLinePitch );
+
                 if ( not this->displayImage )
                 {
                     throw ::std::bad_alloc{ };
@@ -1199,6 +1216,7 @@ auto MainWindow::powerOnRealtime(
     this->realtime.set_display_mode( this->displayMode( ) );
     this->realtime.set_selected_index( 0 );
 
+    #ifdef HINALEA_FREE_FLY
     if ( ::hinalea::RealtimeMode::FreeFly_t::in( this->realtimeMode( ) ) )
     {
         auto const freeFlyPath = ::pathCast( ui->freeFlyLineEdit->text( ) );
@@ -1215,7 +1233,7 @@ auto MainWindow::powerOnRealtime(
         auto tl_x = ui->topLeftXSpinBox->value( );
         auto tl_y = ui->topLeftYSpinBox->value( );
         auto br_x = ui->bottomRightXSpinBox->value( );
-        auto br_y =ui->bottomRightYSpinBox->value( );
+        auto br_y = ui->bottomRightYSpinBox->value( );
 
         // FIXME: Roi{ 0, 0, 0, 0 }.area( ) == 1
         if ( tl_x + tl_y + br_x + br_y ) /* All 0s indicates use full ROI. */
@@ -1244,6 +1262,7 @@ auto MainWindow::powerOnRealtime(
         }
     }
     else
+    #endif
     {
         this->realtime.set_gap_path( this->gapPath( ) );
     }
@@ -1297,7 +1316,10 @@ auto MainWindow::record(
         {
             try
             {
-                this->acquisition.record( saveDir, id, this->makeProgressCallback( ) );
+                if ( not this->acquisition.record( saveDir, id, this->makeProgressCallback( ) ) )
+                {
+                    Q_EMIT this->threadFailed( QObject::tr( "Record Error" ), "Recording failed to complete." );
+                }
             }
             catch ( ::std::exception const & exc )
             {
@@ -1333,8 +1355,7 @@ auto MainWindow::process(
     auto const dir = QFileDialog::getExistingDirectory(
         this,
         QObject::tr( "Load raw data directory." ),
-        // ::pathCast( ::ioDir( ) / HINALEA_PATH( "raw" ) )
-"C:/Users/MattEding/Desktop/YaYa Scientific Legacy Calibration" // FIXME: testing
+        ::pathCast( ::ioDir( ) / HINALEA_PATH( "raw" ) )
         );
 
     if ( dir.isEmpty( ) )
@@ -1734,10 +1755,14 @@ auto MainWindow::updateImageTimerInterval(
     ) -> void
 {
     using namespace ::std::chrono_literals;
+#if 0
     auto const interval = qMax(
         30ms,
         ::std::chrono::ceil< ::std::chrono::milliseconds >( this->exposure( ) )
         );
+#else
+    auto const interval = ::std::chrono::ceil< ::std::chrono::milliseconds >( this->exposure( ) );
+#endif
     this->displayTimer->setInterval( interval );
 }
 
@@ -1779,7 +1804,7 @@ try
     else
     {
         /* RGB sensor, need to convert monochrome color filter array into RGBA image. */
-#if 01
+#if 0
         ::hinalea::demosaic(
             rawImage.get( ),
             this->displayImage.get( ),
@@ -1819,15 +1844,6 @@ try
     {
         return;
     }
-
-#if 0
-    if ( static auto counter = 0; counter < 100 )
-    {
-        auto qimage = this->realtime.qt_image( this->displayImage );
-        [[ maybe_unused ]]
-        bool const ok = qimage.save( QStringLiteral( "C:/Users/MattEding/Desktop/test/roi%0.png" ).arg( counter++ ) );
-    }
-#endif
 
     {
         auto const [ min, max ] = this->realtime.min_max_values( );
@@ -1926,7 +1942,7 @@ auto MainWindow::onUpdateImage(
     auto const channels = this->displayChannels( );
 
     // FIXME: (1) good for Kinetix, (2) good for Matrix Vision at 16-bit
-#if 01
+#if 0
     auto qImage = QImage{
         reinterpret_cast< uchar * >( this->displayImage.get( ) ),
         this->camera.width( ),
@@ -2201,7 +2217,16 @@ auto MainWindow::onThresholdSpinBoxValueChanged(
 auto MainWindow::onLoadSettingsClicked(
     ) -> void
 {
-    if ( auto dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load FPI settings directory." ) );
+    auto const path = ::hinalea_internal
+        ? QString{ "%0/Hardware/Fpi" }.arg( QStandardPaths::writableLocation( QStandardPaths::DesktopLocation ) )
+        : QString{ }
+        ;
+
+    if ( auto dir = QFileDialog::getExistingDirectory(
+            this,
+            QObject::tr( "Load FPI settings directory." ),
+            path
+            );
          not dir.isEmpty( ) )
     {
         /* NOTE:
@@ -2223,21 +2248,30 @@ auto MainWindow::onLoadSettingsClicked(
     }
 }
 
+#ifdef HINALEA_FREE_FLY
 auto MainWindow::onLoadFreeFlyClicked(
     ) -> void
 {
-    if ( auto file = QFileDialog::getOpenFileName( this, QObject::tr( "Load free fly FPI parameters file." ) );
+    if ( auto const file = QFileDialog::getOpenFileName(
+            this,
+            QObject::tr( "Load free fly FPI parameters file." )
+            );
          not file.isEmpty( ) )
     {
         ui->freeFlyLineEdit->setText( file );
     }
 }
+#endif
 
 auto MainWindow::onLoadWhiteClicked(
     ) -> void
 {
-    if ( auto const dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load processed white directory." ) );
-         not dir.isEmpty( ) )
+    if ( auto const dir = QFileDialog::getExistingDirectory(
+            this,
+            QObject::tr( "Load processed white directory." ),
+            ::pathCast( ::ioDir( ) / HINALEA_PATH( "processed" ) )
+            );
+        not dir.isEmpty( ) )
     {
         ui->whiteLineEdit->setText( dir );
         this->updateWhite( );
@@ -2247,7 +2281,10 @@ auto MainWindow::onLoadWhiteClicked(
 auto MainWindow::onLoadDarkClicked(
     ) -> void
 {
-    if ( auto const dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load raw dark directory." ) );
+    if ( auto const dir = QFileDialog::getExistingDirectory(
+            this,
+            QObject::tr( "Load raw dark directory." )
+            );
          not dir.isEmpty( ) )
     {
         {
@@ -2264,7 +2301,10 @@ auto MainWindow::onLoadDarkClicked(
 auto MainWindow::onLoadMatrixClicked(
     ) -> void
 {
-    if ( auto const dir = QFileDialog::getExistingDirectory( this, QObject::tr( "Load trained realtime matrix directory." ) );
+    if ( auto const dir = QFileDialog::getExistingDirectory(
+            this,
+            QObject::tr( "Load trained realtime matrix directory." )
+            );
          not dir.isEmpty( ) )
     {
         ui->matrixLineEdit->setText( dir );
@@ -2274,7 +2314,12 @@ auto MainWindow::onLoadMatrixClicked(
 auto MainWindow::onLoadGapClicked(
     ) -> void
 {
-    if ( auto const txt = QFileDialog::getOpenFileName( this, QObject::tr( "Load gap text file." ), { }, QObject::tr( "Text (*.txt)" ) );
+    if ( auto const txt = QFileDialog::getOpenFileName(
+            this,
+            QObject::tr( "Load gap text file." ),
+            { },
+            QObject::tr( "Text (*.txt)" )
+            );
          not txt.isEmpty( ) )
     {
         ui->gapLineEdit->setText( txt );
@@ -2287,11 +2332,13 @@ auto MainWindow::onClearSettingsClicked(
     ui->settingsLineEdit->clear( );
 }
 
+#ifdef HINALEA_FREE_FLY
 auto MainWindow::onClearFreeFlyClicked(
     ) -> void
 {
     ui->freeFlyLineEdit->clear( );
 }
+#endif
 
 auto MainWindow::onClearWhiteClicked(
     ) -> void
