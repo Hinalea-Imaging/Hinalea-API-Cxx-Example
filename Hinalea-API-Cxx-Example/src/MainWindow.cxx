@@ -269,10 +269,12 @@ MainWindow::MainWindow(
     this->updateCameraType( );
 
     #ifndef HINALEA_FREE_FLY
-    ui->freeFlyLineEdit->hide( );
     ui->clearFreeFlyButton->hide( );
+    ui->freeFlyLineEdit->hide( );
     ui->loadFreeFlyButton->hide( );
     ui->modeComboBox->removeItem( ui->modeComboBox->count( ) - 1 );
+    ui->movePatternLabel->hide( );
+    ui->movePatternComboBox->hide( );
     ui->roiGroupBox->hide( );
     #endif
 }
